@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, globalShortcut } from 'electron'
+import { app, shell, BrowserWindow, globalShortcut, screen } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc'
@@ -43,7 +43,16 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
+    // Center on the primary display so the window never opens off-screen or on
+    // a secondary monitor the user isn't looking at, then bring it to front.
+    const { workArea } = screen.getPrimaryDisplay()
+    const [w, h] = mainWindow.getSize()
+    mainWindow.setPosition(
+      Math.round(workArea.x + (workArea.width - w) / 2),
+      Math.round(workArea.y + (workArea.height - h) / 2)
+    )
     mainWindow.show()
+    mainWindow.focus()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -58,22 +67,40 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.unofficial.audibledesktop')
+// Only allow a single running instance. A second launch (e.g. double-clicking
+// the exe again) focuses the existing window instead of silently spawning a
+// hidden duplicate process.
+const gotTheLock = app.requestSingleInstanceLock()
 
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win) {
+      if (win.isMinimized()) win.restore()
+      win.show()
+      win.focus()
+    }
   })
 
-  handleMediaProtocol()
-  registerIpcHandlers()
-  createWindow()
-  registerMediaKeys()
+  app.whenReady().then(() => {
+    electronApp.setAppUserModelId('com.unofficial.audibledesktop')
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    app.on('browser-window-created', (_, window) => {
+      optimizer.watchWindowShortcuts(window)
+    })
+
+    handleMediaProtocol()
+    registerIpcHandlers()
+    createWindow()
+    registerMediaKeys()
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
   })
-})
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
