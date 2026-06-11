@@ -1,0 +1,14 @@
+node_modules/
+out/
+dist/
+.DS_Store
+*.log
+.env
+.env.*
+/auth-debug/
+/.tmp-audible-config/
+# Bundled audible-cli binary (large; downloaded separately)
+/resources/audible-cli/
+# Defensive: never commit auth data or audible-cli config
+*auth*.json
+**/audible-config/

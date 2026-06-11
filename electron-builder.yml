@@ -1,0 +1,31 @@
+appId: com.unofficial.audibledesktop
+productName: Audible Desktop
+directories:
+  buildResources: build
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+# Ship the bundled audible-cli (auth/API backend). The ffmpeg binary used for
+# decryption is unpacked from the asar so it can be executed.
+extraResources:
+  - from: resources/audible-cli
+    to: audible-cli
+asarUnpack:
+  - '**/node_modules/ffmpeg-static/**'
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+asar: true
+npmRebuild: false
